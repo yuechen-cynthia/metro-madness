@@ -1,10 +1,13 @@
 package com.unimelb.swen30006.metromadness.tracks;
 
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.unimelb.swen30006.metromadness.passengers.Passenger;
 import com.unimelb.swen30006.metromadness.stations.Station;
+import com.unimelb.swen30006.metromadness.trains.Train;
 
 public class Line {
 	
@@ -114,5 +117,46 @@ public class Line {
 			t.render(renderer);
 		}	
 	}
+	
+	////////////////////////
+	public void enterStation(Train t) throws Exception{
+		t.station.enter(t);
+	}
+	
+	public boolean canEnterStation(Train t) throws Exception{
+		return t.station.canEnter(t.trainLine);
+	}
+	
+	public boolean shouldLeave(Train t, Passenger p){
+		return t.station.shouldLeave(p);
+	}
+	public Point2D.Float getPos(Train t){
+		return t.station.position;
+	}
+	
+	public String getName(Train t){
+		return t.station.name;
+	}
+	
+	public float getDepartureTime(Train t){
+		return t.station.getDepartureTime();
+	}
+	
+	public boolean canEnterTrack(Train t){
+		return t.track.canEnter(t.forward);
+	}
+	
+	public void enterTrack(Train t){
+		t.track.enter(t);
+	}
+	
+	public void depart(Train t) throws Exception{
+		t.station.depart(t);
+	}
+	
+	public void leaveTrack(Train t){
+		t.track.leave(t);
+	}
+	
 	
 }

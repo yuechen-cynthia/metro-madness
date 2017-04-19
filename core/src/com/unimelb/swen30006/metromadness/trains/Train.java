@@ -1,6 +1,7 @@
 package com.unimelb.swen30006.metromadness.trains;
 
 import java.awt.geom.Point2D;
+import java.awt.geom.Point2D.Float;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -60,7 +61,7 @@ public class Train {
 
 	
 	public Train(Line trainLine, Station start, boolean forward, String name){
-		this.trainLine = trainLine;
+		this.trainLine = trainLine;		
 		this.station = start;
 		this.state = State.FROM_DEPOT;
 		this.forward = forward;
@@ -83,16 +84,18 @@ public class Train {
 		switch(this.state) {
 		case FROM_DEPOT:
 			if(hasChanged){
-				logger.info(this.name+ " is travelling from the depot: "+this.station.name+" Station...");
+				logger.info(this.name+ " is travelling from the depot: "+this.trainLine.getName(this)+" Station...");
 			}
 			
 			// We have our station initialized we just need to retrieve the next track, enter the
 			// current station officially and mark as in station
 			try {
-				if(this.station.canEnter(this.trainLine)){
-					
-					this.station.enter(this);
-					this.pos = (Point2D.Float) this.station.position.clone();
+				//if(this.station.canEnter(this.trainLine))
+				  if(this.trainLine.canEnterStation(this)){				
+					//this.station.enter(this);
+					this.trainLine.enterStation(this);
+					//this.pos = (Point2D.Float) this.station.position.clone();
+					this.pos = (Point2D.Float) this.trainLine.getPos(this).clone();
 					this.state = State.IN_STATION;
 					this.disembarked = false;
 				}
@@ -101,14 +104,15 @@ public class Train {
 			}
 		case IN_STATION:
 			if(hasChanged){
-				logger.info(this.name+" is in "+this.station.name+" Station.");
+				logger.info(this.name+" is in "+this.trainLine.getName(this)+" Station.");
 			}
 			
 			// When in station we want to disembark passengers 
 			// and wait 10 seconds for incoming passengers
 			if(!this.disembarked){
 				this.disembark();
-				this.departureTimer = this.station.getDepartureTime();
+				//this.departureTimer = this.station.getDepartureTime();
+				this.departureTimer = this.trainLine.getDepartureTime(this);
 				this.disembarked = true;
 			} else {
 				// Count down if departure timer. 
@@ -133,33 +137,36 @@ public class Train {
 			break;
 		case READY_DEPART:
 			if(hasChanged){
-				logger.info(this.name+ " is ready to depart for "+this.station.name+" Station!");
+				logger.info(this.name+ " is ready to depart for "+this.trainLine.getName(this)+" Station!");
 			}
 			
 			// When ready to depart, check that the track is clear and if
 			// so, then occupy it if possible.
-			if(this.track.canEnter(this.forward)){
+			//if(this.track.canEnter(this.forward))
+			if(this.trainLine.canEnterTrack(this)){
 				try {
 					// Find the next
 					Station next = this.trainLine.nextStation(this.station, this.forward);
 					// Depart our current station
-					this.station.depart(this);
+					//this.station.depart(this);
+					this.trainLine.depart(this);
 					this.station = next;
 
 				} catch (Exception e) {
 //					e.printStackTrace();
 				}
-				this.track.enter(this);
+				//this.track.enter(this);
+				this.trainLine.enterTrack(this);
 				this.state = State.ON_ROUTE;
 			}		
 			break;
 		case ON_ROUTE:
 			if(hasChanged){
-				logger.info(this.name+ " enroute to "+this.station.name+" Station!");
+				logger.info(this.name+ " enroute to "+this.trainLine.getName(this)+" Station!");
 			}
 			
 			// Checkout if we have reached the new station
-			if(this.pos.distance(this.station.position) < 10 ){
+			if(this.pos.distance(this.trainLine.getPos(this)) < 10 ){
 				this.state = State.WAITING_ENTRY;
 			} else {
 				move(delta);
@@ -167,16 +174,19 @@ public class Train {
 			break;
 		case WAITING_ENTRY:
 			if(hasChanged){
-				logger.info(this.name+ " is awaiting entry "+this.station.name+" Station..!");
+				logger.info(this.name+ " is awaiting entry "+this.trainLine.getName(this)+" Station..!");
 			}
 			
 			// Waiting to enter, we need to check the station has room and if so
 			// then we need to enter, otherwise we just wait
 			try {
-				if(this.station.canEnter(this.trainLine)){
-					this.track.leave(this);
-					this.pos = (Point2D.Float) this.station.position.clone();
-					this.station.enter(this);
+				//if(this.station.canEnter(this.trainLine))
+				if(this.trainLine.canEnterStation(this)){
+					//this.track.leave(this);
+					this.trainLine.leaveTrack(this);
+					this.pos = (Point2D.Float) this.trainLine.getPos(this).clone();
+					//this.station.enter(this);
+					this.trainLine.enterStation(this);
 					this.state = State.IN_STATION;
 					this.disembarked = false;
 				}
@@ -191,7 +201,7 @@ public class Train {
 
 	public void move(float delta){
 		// Work out where we're going
-		float angle = angleAlongLine(this.pos.x,this.pos.y,this.station.position.x,this.station.position.y);
+		float angle = angleAlongLine(this.pos.x,this.pos.y,this.trainLine.getPos(this).x,this.trainLine.getPos(this).y);
 		float newX = this.pos.x + (float)( Math.cos(angle) * delta * TRAIN_SPEED);
 		float newY = this.pos.y + (float)( Math.sin(angle) * delta * TRAIN_SPEED);
 		this.pos.setLocation(newX, newY);
@@ -207,8 +217,9 @@ public class Train {
 		Iterator<Passenger> iterator = this.passengers.iterator();
 		while(iterator.hasNext()){
 			Passenger p = iterator.next();
-			if(this.station.shouldLeave(p)){
-				logger.info("Passenger "+p.id+" is disembarking at "+this.station.name);
+			//if(this.station.shouldLeave(p))
+			  if(this.trainLine.shouldLeave(this, p)){
+				logger.info("Passenger "+p.id+" is disembarking at "+this.trainLine.getName(this));
 				disembarking.add(p);
 				iterator.remove();
 			}
